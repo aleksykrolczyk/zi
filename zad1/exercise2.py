@@ -33,20 +33,58 @@ class LIFO_Policy:
         if not self.queue:
             return 
         return self.queue.pop()
-            
-            
+             
     def updateURLs(self, c, retrievedURLs, retrievedURLsWD, iteration):
         if retrievedURLs:
             self.queue += sorted(list(retrievedURLs), key=lambda url: url[len(url) - url[::-1].index('/'):])
     
-#-------------------------------------------------------------------------
+    
+class FIFO_Policy:
+    def __init__(self, container):
+        self.queue = container.seedURLs[:]
+    
+    def getURL(self, c, iteration):
+        if not self.queue:
+            return 
+        return self.queue.pop(0)
+             
+    def updateURLs(self, c, retrievedURLs, retrievedURLsWD, iteration):
+        if retrievedURLs:
+            self.queue += sorted(list(retrievedURLs), key=lambda url: url[len(url) - url[::-1].index('/'):])
+        if not self.queue:
+            self.queue = c.seedURLs[:]
+            
+            
+class LIFO_Cycle_Policy:
+    def __init__(self, container):
+        self.queue = container.seedURLs[:]
+        self.fetched = set()
+    
+    def getURL(self, c, iteration):
+        while self.queue and self.queue[-1] in self.fetched:
+            self.queue.pop()
+            
+        if not self.queue:
+            self.queue = c.seedURLs[:]
+            self.fetched.clear()
+        
+        url = self.queue.pop()
+        self.fetched.add(url)
+        
+        return url
+             
+    def updateURLs(self, c, retrievedURLs, retrievedURLsWD, iteration):
+        if retrievedURLs:
+            self.queue += sorted(list(retrievedURLs), key=lambda url: url[len(url) - url[::-1].index('/'):])
+
+            
 # Data container
 class Container:
     def __init__(self):
         # The name of the crawler"
         self.crawlerName = "IRbot"
         # Example ID
-        self.example = "exercise1"
+        self.example = "exercise2"
         # Root (host) page
         self.rootPage = "http://www.cs.put.poznan.pl/mtomczyk/ir/lab1/" + self.example
         # Initial links to visit
@@ -59,7 +97,7 @@ class Container:
          # Incoming URLs (to <- from; set of incoming links)
         self.incomingURLs = {}
         # Class which maintains a queue of urls to visit. 
-        self.generatePolicy = LIFO_Policy(self)
+        self.generatePolicy = LIFO_Cycle_Policy(self)
         # Page (URL) to be fetched next
         self.toFetch = None
         # Number of iterations of a crawler. 
